@@ -2,13 +2,20 @@ $(() => {
   $(document).bind('touchmove', false); // Don't allow scrolling on mobile
   let paused = true; // Canvas starts paused to make sure user has right orientation
 
-
   let renderLoop;
   let x = 250;
   let y = 250;
   let background = new Image();
   background.src = "map.png";
 
+  let aButton = new Image();
+  aButton.src = "img/A.svg";
+
+  let bButton = new Image();
+  bButton.src = "img/B.svg";
+
+  let dpad    = new Image();
+  dpad.src = "img/dpad.svg";
 
   // Default to desktop canvas placement
   // If mobile is detected, it'll be fixed in orientationChange
@@ -21,6 +28,41 @@ $(() => {
     // Display plox install message
   }
 
+  // Touch detection
+  canvas.addEventListener("touchstart", e => {
+    let mousePos = getTouchPos(canvas, e);
+    let touch = e.touches[0];
+    let mouseEvent = new MouseEvent("mousedown", {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    });
+    console.log("touchstart", mouseEvent);
+  }, false);
+
+  canvas.addEventListener("touchend", e => {
+    let mouseEvent = new MouseEvent("mouseup", {});
+    console.log("touchend", mouseEvent);
+  }, false);
+  canvas.addEventListener("touchmove", e => {
+    let touch = e.touches[0];
+    let mouseEvent = new MouseEvent("mousemove", {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    });
+    console.log("touchmove", mouseEvent);
+  }, false);
+
+  // Get the position of a touch relative to the canvas
+  function getTouchPos(canvasDom, touchEvent) {
+    let rect = canvasDom.getBoundingClientRect();
+    return {
+      x: touchEvent.touches[0].clientX - rect.left,
+      y: touchEvent.touches[0].clientY - rect.top
+    };
+  }
+
+
+
   resize();
 
   background.onload = function () {
@@ -30,20 +72,17 @@ $(() => {
   function render() {
     if (paused) return;
 
-    // Green for good for now for for for for
-    ctx.fillStyle = "green";
+    ctx.drawImage(background, 0, 0);
 
-    // Make canvas fill entire screen for mobile devices
-    // Going to have to check into aspect ratios later on for this part
-    // and make sure the canvas is consistent with the desktop
     if (mobilecheck()) {
-      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+      ctx.globalAlpha = 0.25;
+      ctx.drawImage(aButton, 425, 150, 50, 50);
+      ctx.drawImage(bButton, 375, 200, 50, 50);
+      ctx.drawImage(dpad, 40, 140, 115, 115);
 
     } else {
-      ctx.fillRect(0, 0, 512, 288);
 
     }
-    ctx.drawImage(background, 0, 0);
 
     renderLoop = requestAnimationFrame(render);
   }
@@ -53,26 +92,13 @@ $(() => {
     // On mobile in portrait mode
     if (mobilecheck() && window.innerHeight > window.innerWidth) {
       paused = true;
-
-      $('#canvas')
-        .css('width',   window.innerWidth  + "px")
-        .css('height',  window.innerHeight + "px");
-
-      $('#canvas')
-      .css('margin-left', "0px")
-      .css('margin-top', "0px");
-
-      // Display message to change orientation
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, window.innerHeight, window.innerWidth);
-
-      ctx.font = "20px Arial";
-      ctx.fillStyle = "white";
-      ctx.fillText("Please change your orientation", 110, 130);
-      ctx.fillText("to landscape", 190, 150);
+      $('#canvas').hide();
+      $('#orientation').show();
 
     } else {
       paused = false;
+      $('#canvas').show();
+      $('#orientation').hide();
 
       renderLoop = requestAnimationFrame(render);
     }
