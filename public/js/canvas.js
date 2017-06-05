@@ -1,24 +1,8 @@
+let widthMultiplier = 1, heightMultiplier = 1;
 $(() => {
   $(document).bind('touchmove', false); // Don't allow scrolling on mobile
   let paused = true; // Canvas starts paused to make sure user has right orientation
-
   let renderLoop;
-  let x = 250;
-  let y = 250;
-  let background = new Image();
-  background.src = "map.png";
-
-  let aButton = new Image();
-  aButton.src = "img/A.svg";
-
-  let bButton = new Image();
-  bButton.src = "img/B.svg";
-
-  let dpad    = new Image();
-  dpad.src = "img/dpad.svg";
-
-  // Default to desktop canvas placement
-  // If mobile is detected, it'll be fixed in orientationChange
 
   let canvas = $("#canvas")[0];
   let ctx    = canvas.getContext('2d');
@@ -28,28 +12,78 @@ $(() => {
     // Display plox install message
   }
 
+  // Button settings
+  let btn = {
+    trasparency: .25,
+    a: {
+      x: 425,
+      y: 150,
+      width: 50,
+      height: 50
+    },
+    b: {
+      x: 375,
+      y: 200,
+      width: 50,
+      height: 50
+    },
+    dpad: {
+      x: 45,
+      y: 145,
+      width: 26,
+      height: 37
+    },
+    held: {
+      a:     false,
+      b:     false,
+      up:    false,
+      right: false,
+      down:  false,
+      left:  false
+    }
+  };
+
   // Touch detection
+  // Tap (movement = change direction; normal button = use)
   canvas.addEventListener("touchstart", e => {
     let mousePos = getTouchPos(canvas, e);
+    console.log(e.touches[0].clientX, e.touches[0].screenX, e.touches[0].clientY, e.touches[0].screenY);
+    updateHeld(mousePos);
+
     let touch = e.touches[0];
     let mouseEvent = new MouseEvent("mousedown", {
       clientX: touch.clientX,
       clientY: touch.clientY
     });
-    console.log("touchstart", mouseEvent);
+    //console.log("touchstart", mouseEvent);
   }, false);
 
+  // Touch stopped, stop highlighting buttons and performing actions
   canvas.addEventListener("touchend", e => {
+    btn.held = {
+      a:     false,
+      b:     false,
+      up:    false,
+      right: false,
+      down:  false,
+      left:  false
+    };
+
     let mouseEvent = new MouseEvent("mouseup", {});
-    console.log("touchend", mouseEvent);
   }, false);
+
+  // keep track of the x and y as user moves touch
   canvas.addEventListener("touchmove", e => {
+    console.log(e.touches[0].clientX, e.touches[0].screenX, e.touches[0].clientY, e.touches[0].screenY);
+    let mousePos = getTouchPos(canvas, e);
+    updateHeld(mousePos);
+
     let touch = e.touches[0];
     let mouseEvent = new MouseEvent("mousemove", {
       clientX: touch.clientX,
       clientY: touch.clientY
     });
-    console.log("touchmove", mouseEvent);
+    //console.log("touchmove", mouseEvent);
   }, false);
 
   // Get the position of a touch relative to the canvas
@@ -61,24 +95,105 @@ $(() => {
     };
   }
 
+  function updateHeld(m) {
+    m.x /= widthMultiplier;
+    m.y /= heightMultiplier;
 
+    // A
+    //console.log(`${m.x} >= ${btn.a.x} && ${m.x} <= ${btn.a.x} + ${btn.a.width} && ${m.y} >= ${btn.a.y} && ${m.y} <= ${btn.a.y} + ${btn.a.height}`)
+    if (m.x >= btn.a.x && m.x <= btn.a.x + btn.a.width && m.y >= btn.a.y && m.y <= btn.a.y + btn.a.height) btn.held.a = true;
+
+    // B
+    if (m.x >= btn.b.x && m.x <= btn.b.x + btn.b.width && m.y >= btn.b.y && m.y <= btn.b.y + btn.b.height) btn.held.b = true;
+
+    // Dpad
+    // Up
+    if (m.x >= btn.dpad.x+40 && m.x <= btn.dpad.x+40 + btn.dpad.width && m.y >= btn.dpad.y && m.y <= btn.dpad.y + btn.dpad.height) btn.held.up = true;
+
+    // Right
+    if (m.x >= btn.dpad.x+70 && m.x <= btn.dpad.x+70 + btn.dpad.width && m.y >= btn.dpad.y+40 && m.y <= btn.dpad.y+40 + btn.dpad.height) btn.held.right = true;
+
+    // Down
+    if (m.x >= btn.dpad.x+40 && m.x <= btn.dpad.x+40 + btn.dpad.width && m.y >= btn.dpad.y+70 && m.y <= btn.dpad.y+70 + btn.dpad.height) btn.held.down = true;
+
+    // Left
+    if (m.x >= btn.dpad.x && m.x <= btn.dpad.x + btn.dpad.width && m.y >= btn.dpad.y+40 && m.y <= btn.dpad.y+40 + btn.dpad.height) btn.held.left = true;
+
+    //console.log(btn.held);
+  }
 
   resize();
 
-  background.onload = function () {
+  let images = {};
+
+  async.series([
+    cb => {
+      images.background = new Image();
+      images.background.src = "img/map.png";
+      images.background.onload = () => cb();
+    },
+    cb => {
+      images.aButton = new Image();
+      images.aButton.src = "img/A.svg";
+      images.aButton.onload = () => cb();
+    },
+    cb => {
+      images.bButton = new Image();
+      images.bButton.src = "img/B.svg";
+      images.bButton.onload = () => cb();
+    },
+    cb => {
+      images.dpadup = new Image();
+      images.dpadup.src = "img/dpad_up.svg";
+      images.dpadup.onload = () => cb();
+    },
+    cb => {
+      images.dpadright = new Image();
+      images.dpadright.src = "img/dpad_right.svg";
+      images.dpadright.onload = () => cb();
+    },
+    cb => {
+      images.dpaddown = new Image();
+      images.dpaddown.src = "img/dpad_down.svg";
+      images.dpaddown.onload = () => cb();
+    },
+    cb => {
+      images.dpadleft = new Image();
+      images.dpadleft.src = "img/dpad_left.svg";
+      images.dpadleft.onload = () => cb();
+    },
+
+  // Start render loop after assets are loaded
+  ], () => {
     renderLoop = requestAnimationFrame(render);
-  }
+  });
 
   function render() {
     if (paused) return;
 
-    ctx.drawImage(background, 0, 0);
+    ctx.drawImage(images.background, 0, 0);
 
     if (mobilecheck()) {
-      ctx.globalAlpha = 0.25;
-      ctx.drawImage(aButton, 425, 150, 50, 50);
-      ctx.drawImage(bButton, 375, 200, 50, 50);
-      ctx.drawImage(dpad, 40, 140, 115, 115);
+      ctx.globalAlpha = btn.trasparency;
+
+      ctx.globalAlpha = btn.held.a ? 1 : btn.trasparency;
+      ctx.drawImage(images.aButton,   btn.a.x,       btn.a.y,       btn.a.width, btn.a.height);
+
+      ctx.globalAlpha = btn.held.b ? 1 : btn.trasparency;
+      ctx.drawImage(images.bButton,   btn.b.x,       btn.b.y,       btn.b.width, btn.b.height);
+
+      ctx.globalAlpha = btn.held.up ? 1 : btn.trasparency;
+      ctx.drawImage(images.dpadup,    btn.dpad.x+40, btn.dpad.y,    btn.dpad.width, btn.dpad.height);
+
+      ctx.globalAlpha = btn.held.right ? 1 : btn.trasparency;
+      ctx.drawImage(images.dpadright, btn.dpad.x+70, btn.dpad.y+40, btn.dpad.height, btn.dpad.width);
+
+      ctx.globalAlpha = btn.held.down ? 1 : btn.trasparency;
+      ctx.drawImage(images.dpaddown,  btn.dpad.x+40, btn.dpad.y+70, btn.dpad.width, btn.dpad.height);
+
+      ctx.globalAlpha = btn.held.left ? 1 : btn.trasparency;
+      ctx.drawImage(images.dpadleft,  btn.dpad.x,    btn.dpad.y+40, btn.dpad.height, btn.dpad.width);
+      ctx.globalAlpha = btn.trasparency;
 
     } else {
 
@@ -99,8 +214,6 @@ $(() => {
       paused = false;
       $('#canvas').show();
       $('#orientation').hide();
-
-      renderLoop = requestAnimationFrame(render);
     }
   }
 
@@ -149,13 +262,20 @@ function resize() {
     $('#canvas')
       .css('width',   width  + "px")
       .css('height',  height + "px");
+
+    widthMultiplier  = 512/width;
+    heightMultiplier = 288/height;
   } else {
     $('#canvas')
       .css('margin-top', "0px")
       .css('margin-left', "0px")
       .css('width',   window.innerWidth + "px")
       .css('height',  window.innerHeight + "px");
+
+    widthMultiplier  = window.innerWidth/512;
+    heightMultiplier = window.innerHeight/288;
   }
+  console.log(widthMultiplier, heightMultiplier);
 }
 
 function pad(n, width, z) {
