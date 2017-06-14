@@ -40,6 +40,14 @@ $(() => {
       right: false,
       down:  false,
       left:  false
+    },
+    times: {
+      a: {},
+      b:     {},
+      up:    {},
+      right: {},
+      down:  {},
+      left:  {}
     }
   };
 
@@ -47,7 +55,6 @@ $(() => {
   // Tap (movement = change direction; normal button = use)
   canvas.addEventListener("touchstart", e => {
     let mousePos = getTouchPos(canvas, e);
-    console.log(e.touches[0].clientX, e.touches[0].screenX, e.touches[0].clientY, e.touches[0].screenY);
     updateHeld(mousePos);
 
     let touch = e.touches[0];
@@ -55,26 +62,17 @@ $(() => {
       clientX: touch.clientX,
       clientY: touch.clientY
     });
-    //console.log("touchstart", mouseEvent);
   }, false);
 
   // Touch stopped, stop highlighting buttons and performing actions
   canvas.addEventListener("touchend", e => {
-    btn.held = {
-      a:     false,
-      b:     false,
-      up:    false,
-      right: false,
-      down:  false,
-      left:  false
-    };
-
+    let mousePos = getTouchPos(canvas, e);
+    updateHeld(mousePos, true);
     let mouseEvent = new MouseEvent("mouseup", {});
   }, false);
 
   // keep track of the x and y as user moves touch
   canvas.addEventListener("touchmove", e => {
-    console.log(e.touches[0].clientX, e.touches[0].screenX, e.touches[0].clientY, e.touches[0].screenY);
     let mousePos = getTouchPos(canvas, e);
     updateHeld(mousePos);
 
@@ -83,43 +81,75 @@ $(() => {
       clientX: touch.clientX,
       clientY: touch.clientY
     });
-    //console.log("touchmove", mouseEvent);
   }, false);
 
   // Get the position of a touch relative to the canvas
   function getTouchPos(canvasDom, touchEvent) {
     let rect = canvasDom.getBoundingClientRect();
-    return {
-      x: touchEvent.touches[0].clientX - rect.left,
-      y: touchEvent.touches[0].clientY - rect.top
-    };
+    if (touchEvent.touches.length !== 0) {
+      return {
+        x: touchEvent.touches[0].clientX - rect.left,
+        y: touchEvent.touches[0].clientY - rect.top
+      };
+    } else {
+      return {
+        x: touchEvent.changedTouches[0].clientX - rect.left,
+        y: touchEvent.changedTouches[0].clientY - rect.top
+      };
+    }
   }
 
-  function updateHeld(m) {
+  function updateHeld(m, end=false) {
     m.x /= widthMultiplier;
     m.y /= heightMultiplier;
+    let affected = [];
 
     // A
-    //console.log(`${m.x} >= ${btn.a.x} && ${m.x} <= ${btn.a.x} + ${btn.a.width} && ${m.y} >= ${btn.a.y} && ${m.y} <= ${btn.a.y} + ${btn.a.height}`)
-    if (m.x >= btn.a.x && m.x <= btn.a.x + btn.a.width && m.y >= btn.a.y && m.y <= btn.a.y + btn.a.height) btn.held.a = true;
+    if (m.x >= btn.a.x && m.x <= btn.a.x + btn.a.width && m.y >= btn.a.y && m.y <= btn.a.y + btn.a.height) {
+      affected.push('a');
+    }
 
-    // B
-    if (m.x >= btn.b.x && m.x <= btn.b.x + btn.b.width && m.y >= btn.b.y && m.y <= btn.b.y + btn.b.height) btn.held.b = true;
+    if (m.x >= btn.b.x && m.x <= btn.b.x + btn.b.width && m.y >= btn.b.y && m.y <= btn.b.y + btn.b.height) {
+      affected.push('b');
+    }
 
-    // Dpad
-    // Up
-    if (m.x >= btn.dpad.x+40 && m.x <= btn.dpad.x+40 + btn.dpad.width && m.y >= btn.dpad.y && m.y <= btn.dpad.y + btn.dpad.height) btn.held.up = true;
+    if (m.x >= btn.dpad.x+40 && m.x <= btn.dpad.x+40 + btn.dpad.width && m.y >= btn.dpad.y && m.y <= btn.dpad.y + btn.dpad.height) {
+      affected.push('up');
+    }
 
-    // Right
-    if (m.x >= btn.dpad.x+70 && m.x <= btn.dpad.x+70 + btn.dpad.width && m.y >= btn.dpad.y+40 && m.y <= btn.dpad.y+40 + btn.dpad.height) btn.held.right = true;
+    if (m.x >= btn.dpad.x+70 && m.x <= btn.dpad.x+70 + btn.dpad.width && m.y >= btn.dpad.y+40 && m.y <= btn.dpad.y+40 + btn.dpad.height) {
+      affected.push('right');
+    }
 
-    // Down
-    if (m.x >= btn.dpad.x+40 && m.x <= btn.dpad.x+40 + btn.dpad.width && m.y >= btn.dpad.y+70 && m.y <= btn.dpad.y+70 + btn.dpad.height) btn.held.down = true;
+    if (m.x >= btn.dpad.x+40 && m.x <= btn.dpad.x+40 + btn.dpad.width && m.y >= btn.dpad.y+70 && m.y <= btn.dpad.y+70 + btn.dpad.height) {
+      affected.push('down');
+    }
 
-    // Left
-    if (m.x >= btn.dpad.x && m.x <= btn.dpad.x + btn.dpad.width && m.y >= btn.dpad.y+40 && m.y <= btn.dpad.y+40 + btn.dpad.height) btn.held.left = true;
+    if (m.x >= btn.dpad.x && m.x <= btn.dpad.x + btn.dpad.width && m.y >= btn.dpad.y+40 && m.y <= btn.dpad.y+40 + btn.dpad.height) {
+      affected.push('left');
+    }
 
-    //console.log(btn.held);
+    affected.forEach(button => {
+      btn.held[button] = true;
+      if (btn.times[button].start === undefined) {
+        btn.times[button].start = Date.now();
+      } else if (end && Date.now() - btn.times[button].start < 5000000) {
+        if (!btn.times[button].held) {
+          //console.log('tap');
+        }
+        btn.times[button] = {};
+        btn.held[button] = false;
+      } else {
+        if (Date.now()-btn.times[button].start > 500) {
+          btn.times[button].held = true;
+          //console.log(Date.now()-btn.times[button].start, 'held');
+        }
+      }
+    });
+
+    ['a', 'b', 'up', 'left', 'right', 'down'].filter(item => affected.indexOf(item) === -1).forEach(button => {
+      btn.held[button] = false;
+    });
   }
 
   resize();
@@ -170,7 +200,6 @@ $(() => {
 
   function render() {
     if (paused) return;
-
     ctx.drawImage(images.background, 0, 0);
 
     if (mobilecheck()) {
@@ -201,7 +230,6 @@ $(() => {
 
     renderLoop = requestAnimationFrame(render);
   }
-
 
   function orientChange() {
     // On mobile in portrait mode
@@ -275,7 +303,7 @@ function resize() {
     widthMultiplier  = window.innerWidth/512;
     heightMultiplier = window.innerHeight/288;
   }
-  console.log(widthMultiplier, heightMultiplier);
+
 }
 
 function pad(n, width, z) {
